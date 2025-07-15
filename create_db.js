@@ -3,8 +3,10 @@ const mysql = require('mysql2');
 
 const connection = mysql.createConnection({
   host: process.env.DB_HOST,
+  port: process.env.DB_PORT,                 // important for Railway!
   user: process.env.DB_USER,
-  password: process.env.DB_PASSWORD
+  password: process.env.DB_PASS,
+  database: process.env.DB_NAME             // directly connect to existing DB
 });
 
 connection.connect((err) => {
@@ -12,12 +14,6 @@ connection.connect((err) => {
     console.error('Error connecting to MySQL:', err.message);
     process.exit(1);
   }
-  connection.query(`CREATE DATABASE IF NOT EXISTS ${process.env.DB_NAME}`, (err) => {
-    if (err) {
-      console.error('Error creating database:', err.message);
-    } else {
-      console.log(`Database ${process.env.DB_NAME} created or already exists.`);
-    }
-    connection.end();
-  });
+  console.log(`Connected to MySQL database "${process.env.DB_NAME}".`);
+  connection.end();
 });

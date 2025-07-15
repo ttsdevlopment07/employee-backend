@@ -14,3 +14,4 @@ yarn-error.log*
 
 # Build outputs (if any)
 dist/
+uploads/
