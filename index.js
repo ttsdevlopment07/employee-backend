@@ -1,6 +1,7 @@
 const express = require('express');
 const path = require('path');
 const cors = require('cors');
+require('dotenv').config();
 
 const sequelize = require('./models/mysql');
 const employeeRoutes = require('./routes/employeeRoutes');
@@ -12,16 +13,22 @@ const Attendance = require('./models/Attendance');
 const Notification = require('./models/Notification');
 
 const app = express();
+const PORT = process.env.PORT || 5000;
 
 // Middleware
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ limit: '50mb', extended: true }));
+
+// ✅ CORS for local and deployed frontend
 app.use(cors({
-  origin: 'http://localhost:3000', // You can change this to your deployed frontend URL
+  origin: [
+    'http://localhost:3000',
+    
+  ],
   credentials: true
 }));
 
-// Serve uploaded files
+// Static file serving
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 // API routes
@@ -30,17 +37,12 @@ app.use('/api/tasks', taskRoutes);
 app.use('/api/reports', reportRoutes);
 app.use('/api/notifications', notificationRoutes);
 
-// Attendance endpoints
+// Attendance API
 app.post('/api/attendance', async (req, res) => {
   const { employeeId, name, type, timestamp } = req.body;
-
   try {
     if (type === 'dayin') {
-      await Attendance.create({
-        employee_id: employeeId,
-        name,
-        dayin: timestamp
-      });
+      await Attendance.create({ employee_id: employeeId, name, dayin: timestamp });
       res.json({ success: true });
     } else if (type === 'dayout') {
       const record = await Attendance.findOne({
@@ -52,7 +54,7 @@ app.post('/api/attendance', async (req, res) => {
         await record.save();
         res.json({ success: true });
       } else {
-        res.status(404).json({ error: 'No day-in record found to update' });
+        res.status(404).json({ error: 'No day-in record found' });
       }
     } else {
       res.status(400).json({ error: 'Invalid type' });
@@ -72,11 +74,18 @@ app.get('/api/attendance', async (req, res) => {
   }
 });
 
-// Start server and connect DB
-const PORT = process.env.PORT || 5000;
+// ✅ DB Connection Test Route
+app.get('/test-db', async (req, res) => {
+  try {
+    const [result] = await sequelize.query('SELECT NOW() as time');
+    res.json({ connected: true, time: result[0].time });
+  } catch (e) {
+    res.status(500).json({ connected: false, error: e.message });
+  }
+});
 
+// 🔌 Start server and connect DB
 console.log('🔌 Starting server...');
-
 sequelize.authenticate()
   .then(async () => {
     console.log('✅ Database connected.');
@@ -84,12 +93,13 @@ sequelize.authenticate()
     // Sync models
     await Attendance.sync();
     await Notification.sync();
+    // Add other model syncs if needed
 
     app.listen(PORT, () => {
       console.log(`🚀 Server running on port ${PORT}`);
     });
   })
   .catch((err) => {
-    console.error('❌ Unable to connect to the database:', err.message);
-    process.exit(1); // Exit to fail the deployment early on DB error
+    console.error('❌ DB connection error:', err.message);
+    process.exit(1); // Fail deployment if DB fails
   });
