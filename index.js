@@ -15,29 +15,29 @@ const Notification = require('./models/Notification');
 const app = express();
 const PORT = process.env.PORT || 5000;
 
-// Middleware
+// ✅ Middleware
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ limit: '50mb', extended: true }));
 
-// ✅ CORS for local and deployed frontend
+// ✅ CORS for local + deployed frontend
 app.use(cors({
   origin: [
     'http://localhost:3000',
-    
+    process.env.FRONTEND_URL
   ],
   credentials: true
 }));
 
-// Static file serving
+// ✅ Serve uploaded files
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
-// API routes
+// ✅ Routes
 app.use('/api/employees', employeeRoutes);
 app.use('/api/tasks', taskRoutes);
 app.use('/api/reports', reportRoutes);
 app.use('/api/notifications', notificationRoutes);
 
-// Attendance API
+// ✅ Attendance Routes
 app.post('/api/attendance', async (req, res) => {
   const { employeeId, name, type, timestamp } = req.body;
   try {
@@ -84,22 +84,18 @@ app.get('/test-db', async (req, res) => {
   }
 });
 
-// 🔌 Start server and connect DB
+// ✅ Start Server
 console.log('🔌 Starting server...');
 sequelize.authenticate()
   .then(async () => {
     console.log('✅ Database connected.');
-
-    // Sync models
     await Attendance.sync();
     await Notification.sync();
-    // Add other model syncs if needed
-
     app.listen(PORT, () => {
       console.log(`🚀 Server running on port ${PORT}`);
     });
   })
   .catch((err) => {
     console.error('❌ DB connection error:', err.message);
-    process.exit(1); // Fail deployment if DB fails
+    process.exit(1);
   });
